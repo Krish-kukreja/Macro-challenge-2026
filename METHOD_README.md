@@ -2,7 +2,7 @@
 
 ## Method Overview
 
-A three-stage macro placement pipeline that combines GPU-accelerated analytical placement with direct optimization of the TILOS proxy cost formula.
+A four-stage macro placement pipeline that combines GPU-accelerated analytical placement with direct optimization of the TILOS proxy cost formula.
 
 ### Stage 1: DREAMPlace Global Placement
 - GPU-accelerated electrostatic-field-based analytical placer
@@ -16,14 +16,15 @@ A three-stage macro placement pipeline that combines GPU-accelerated analytical 
 - **Soft L-routing congestion model** with sigmoid-based tile indicators
 - **Soft ABU5** via detached quantile threshold
 - Progressive overlap penalty curriculum (0 → 2000) for maximum exploration
-- Iterative rounds: coarse pass (lr=0.005) → cleanup → fine pass (lr=0.0008)
-- Multi-start: runs from DREAMPlace output AND CT initial placement
+- Iterative rounds: 3× coarse pass (lr=0.005) → cleanup → fine pass (lr=0.0008)
+- Multi-start: runs from DREAMPlace output + CT initial placement + random jittered starts
 
 ### Stage 3: ABU5 Coordinate Descent
 - Post-optimization pass using the **actual TILOS evaluator** (not approximation)
 - Ranks macros by net degree (high-degree = most congestion impact)
-- Tries 8 directional moves per macro, accepts only moves that reduce real proxy
+- Tries 8 directional moves per macro (cardinal + diagonal), accepts only moves that reduce real proxy
 - Guaranteed improvement: every accepted move reduces the actual score
+- Step decay when no improvement; time-budgeted (300s)
 
 ### Stage 4: Overlap Cleanup
 - 4-stage pipeline guaranteeing zero overlaps:
@@ -43,6 +44,75 @@ The differentiable optimizer eliminates the **objective mismatch** between DREAM
 | Average proxy cost (17 IBM benchmarks) | ~1.19 |
 | All benchmarks valid | ✓ (0 overlaps) |
 | Runtime per benchmark | ~50 min (RTX 4050) / ~15 min (RTX 6000 Ada) |
+
+## Development Journey
+
+This project evolved through rapid iteration over ~10 days. Here's how we got from a broken placer to a competitive submission:
+
+### Phase 1: Getting DREAMPlace Working (Days 1-3)
+
+**Starting point:** The competition's example greedy placer scores ~2.21. We wanted to use DREAMPlace (GPU-accelerated analytical placer) but it doesn't natively support the TILOS benchmark format.
+
+- **Built DREAMPlace from source** in WSL2 Ubuntu 22.04 against CUDA 11.8 (RTX 4050, sm_89)
+- **Wrote a format converter** (`pb2bookshelf.py`) to translate TILOS `.pb.txt` + `.plc` files into Bookshelf format that DREAMPlace understands
+- **Patched DREAMPlace** for NumPy 2.0 compatibility, WSL2 CUDA detection issues, and pin_pos fallback bugs
+- **Built the overlap cleanup pipeline** — DREAMPlace produces overlap-free standard cell placements but not macro placements, so we needed a custom legalizer
+
+**Result:** DREAMPlace alone → ~1.33 average proxy. Already beating RePlAce (1.46).
+
+### Phase 2: Differentiable Optimizer (Days 4-6)
+
+**Problem identified:** DREAMPlace optimizes its own internal objective (HPWL + electrostatic density). The TILOS proxy formula is different — especially the congestion term (ABU5 of L-routed demand). There's an objective mismatch.
+
+- **First attempt:** Gaussian splatting for density → diverged because it didn't match TILOS's actual computation
+- **Fix:** Switched to exact rectangular overlap density (what TILOS actually computes) → perfect correlation
+- **Added soft L-routing congestion** with sigmoid-based range indicators, matching TILOS's star decomposition
+- **Progressive overlap curriculum** (0 → 2000): let macros overlap freely early for exploration, then force them apart
+- **Multi-pass strategy:** coarse (lr=0.005) then fine (lr=0.0008) for deeper convergence
+
+**Result:** DREAMPlace + diff_opt → ~1.22 average proxy. 5-8% improvement from the optimizer alone.
+
+### Phase 3: Iterative Refinement (Days 7-8)
+
+**Insight:** Running the optimizer once leaves room for improvement. Each round of optimize → cleanup → optimize again finds a slightly better local minimum.
+
+- **Iterative rounds:** 3 rounds of (coarse + fine + cleanup) instead of just one
+- **Multi-start:** Also try optimizing from the CT initial placement and random jittered positions — different starting points find different basins
+- **Checkpoint selection:** Instead of using DREAMPlace's final iteration, scan all checkpoints and pick the one with best proxy after cleanup
+
+**Result:** Iterative + multi-start → ~1.20 average proxy.
+
+### Phase 4: Real TILOS Coordinate Descent (Days 9-10)
+
+**Insight:** Our differentiable congestion is an approximation. The real TILOS evaluator is the ground truth. Why not use it directly?
+
+- **ABU5 coordinate descent:** For top-10 macros by net degree, try 8 directional moves and accept only moves that reduce the REAL proxy
+- **Guaranteed improvement:** Every accepted move makes the actual score better (no approximation error)
+- **Time-budgeted:** Runs for up to 300s, with step decay when no improvement found
+
+**Result:** Full pipeline → **~1.19 average proxy**. Each component contributes measurably.
+
+### What We Tried That Didn't Work
+
+- **Gaussian splatting for density** — diverged because it doesn't match TILOS's computation
+- **RUDY congestion model** — TILOS uses L-routing, not uniform bounding-box distribution
+- **Very high overlap penalty from the start** — constrains exploration too early, worse final results
+- **Single-pass optimization** — iterative rounds consistently find better solutions
+- **Fine grid DREAMPlace (1024 bins)** — slower but not consistently better than default
+- **Orientation search (N/FN/FS/S flips)** — no improvement because our optimizer uses macro centers, not pin offsets
+
+### Progression Summary
+
+| Version | Avg Proxy | Key Change |
+|---------|-----------|------------|
+| Greedy baseline | 2.21 | Competition example |
+| Bug fixes + legalizer | 1.47 | Basic DREAMPlace working |
+| DREAMPlace integration | 1.33 | Format converter + cleanup pipeline |
+| Checkpoint selection | 1.32 | Pick best iteration, not just final |
+| Multi-mode strategy | 1.28 | default + congestion_aware configs |
+| Differentiable optimizer | 1.22 | Direct TILOS proxy optimization |
+| Iterative rounds | 1.20 | 3 rounds of coarse + fine |
+| ABU5 coordinate descent | **1.19** | Real TILOS evaluator moves |
 
 ## How to Run
 
@@ -81,7 +151,10 @@ Input: TILOS benchmark (.pb.txt + initial.plc)
   └─→ Pick best mode ─────────────────────────────────┘
          │
          ▼
-  Differentiable Proxy Optimizer (coarse + fine passes)
+  Differentiable Proxy Optimizer (3 rounds × coarse + fine)
+         │
+         ▼
+  Multi-start: CT initial + 3 random jittered starts
          │
          ▼
   ABU5 Coordinate Descent (real TILOS evaluator)

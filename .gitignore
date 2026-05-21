@@ -1,6 +1,9 @@
 # Visualizations
 vis/
 
+# DREAMPlace temp files
+*.lp
+
 # Python
 __pycache__/
 *.py[cod]
