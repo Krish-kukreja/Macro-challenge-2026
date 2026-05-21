@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install Python 3.10 + system deps (network available at build time)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common curl \
+    software-properties-common curl gpg gpg-agent \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.10-distutils \
     python3.10-venv \
     git \
+    libcairo2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pip for Python 3.10
@@ -27,7 +28,7 @@ RUN python3.10 -m pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cu124
 
 RUN python3.10 -m pip install --no-cache-dir \
-    numpy scipy tqdm matplotlib absl-py
+    numpy scipy tqdm matplotlib absl-py shapely cairocffi
 
 # Set working directory
 WORKDIR /challenge
