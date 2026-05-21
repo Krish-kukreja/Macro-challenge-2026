@@ -41,9 +41,9 @@ The differentiable optimizer eliminates the **objective mismatch** between DREAM
 
 | Metric | Value |
 |--------|-------|
-| Average proxy cost (17 IBM benchmarks) | ~1.19 |
+| Average proxy cost (17 IBM benchmarks) | 1.1994 |
 | All benchmarks valid | ✓ (0 overlaps) |
-| Runtime per benchmark | ~50 min (RTX 4050) / ~15 min (RTX 6000 Ada) |
+| Runtime per benchmark | ~51 min (RTX 4050) / ~15 min (RTX 6000 Ada) |
 
 ## Development Journey
 
@@ -90,7 +90,7 @@ This project evolved through rapid iteration over ~10 days. Here's how we got fr
 - **Guaranteed improvement:** Every accepted move makes the actual score better (no approximation error)
 - **Time-budgeted:** Runs for up to 300s, with step decay when no improvement found
 
-**Result:** Full pipeline → **~1.19 average proxy**. Each component contributes measurably.
+**Result:** Full pipeline → **1.1994 average proxy**. Each component contributes measurably.
 
 ### What We Tried That Didn't Work
 
@@ -112,12 +112,47 @@ This project evolved through rapid iteration over ~10 days. Here's how we got fr
 | Multi-mode strategy | 1.28 | default + congestion_aware configs |
 | Differentiable optimizer | 1.22 | Direct TILOS proxy optimization |
 | Iterative rounds | 1.20 | 3 rounds of coarse + fine |
-| ABU5 coordinate descent | **1.19** | Real TILOS evaluator moves |
+| ABU5 coordinate descent | **1.1994** | Real TILOS evaluator moves |
 
 ## How to Run
 
+### Option 1: Docker (Recommended for Judges)
+
+This is the easiest way to run the submission. The Dockerfile handles all dependencies including Python 3.10 (required for our compiled .so files).
+
 ```bash
-# Install dependencies
+# Clone the repo
+git clone https://github.com/Krish-kukreja/Macro-challenge-2026.git
+cd Macro-challenge-2026
+
+# Initialize the TILOS submodule (needed for evaluation)
+git submodule update --init external/MacroPlacement
+
+# Build the Docker image (downloads ~4GB, takes ~5 min)
+docker build -t dreamplace-diffopt -f submissions/analytical_placer/Dockerfile .
+
+# Run on all 17 IBM benchmarks (--network none enforced at runtime)
+docker run --gpus all --network none \
+  dreamplace-diffopt \
+  /submission/placer.py --all
+
+# Run on a single benchmark
+docker run --gpus all --network none \
+  dreamplace-diffopt \
+  /submission/placer.py -b ibm01
+```
+
+### Option 2: Local (Development)
+
+Requires Python 3.10, CUDA 11.8+, and an NVIDIA GPU.
+
+```bash
+# Clone and setup
+git clone https://github.com/Krish-kukreja/Macro-challenge-2026.git
+cd Macro-challenge-2026
+git submodule update --init external/MacroPlacement
+
+# Install dependencies (Python 3.10 required for .so compatibility)
 pip install -e .
 
 # Run on single benchmark
@@ -126,18 +161,30 @@ python -m macro_place.evaluate submissions/analytical_placer/placer.py -b ibm01
 # Run on all 17 benchmarks
 python -m macro_place.evaluate submissions/analytical_placer/placer.py --all
 
-# Run sweep (saves results to JSON)
+# Run sweep with JSON output
 python dreamplace_integration/sweep.py --out results.json
 ```
 
+### Expected Output
+
+```
+Benchmark     Proxy        SA   RePlAce     vs SA  vs RePlAce  Overlaps
+   ibm01    0.8690    1.3166    0.9976    +34.0%      +12.9%         0
+   ibm02    1.2133    1.9072    1.8370    +36.4%      +33.9%         0
+   ...
+     AVG    ~1.19     2.1251    1.4578    +44.0%      +18.4%         0
+```
+
+Each benchmark takes ~50 min on RTX 4050 or ~15 min on RTX 6000 Ada.
+
 ## Requirements
 
-- Python 3.10 (for DREAMPlace .so compatibility)
-- PyTorch 2.5.1+ with CUDA
-- NVIDIA GPU (RTX 4050+ recommended)
+- **Python 3.10** (our DREAMPlace .so files are compiled for cpython-310)
+- **PyTorch 2.5.1+** with CUDA
+- **NVIDIA GPU** (RTX 4050+ recommended, needs CUDA 11.8+ driver)
 - See `requirements.txt` for full list
 
-A Dockerfile is provided at `submissions/analytical_placer/Dockerfile` for reproducible builds.
+The Dockerfile at `submissions/analytical_placer/Dockerfile` handles all of this automatically.
 
 ## Architecture
 

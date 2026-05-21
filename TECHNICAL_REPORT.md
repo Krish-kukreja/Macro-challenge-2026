@@ -2,11 +2,11 @@
 
 ## Result
 
-**Average proxy cost: ~1.19** across 17 ICCAD04 IBM benchmarks (v10)
+**Average proxy cost: 1.1994** across 17 ICCAD04 IBM benchmarks
 - All 17 benchmarks: 0 overlaps
-- 19% better than the 1.4738 baseline
-- 18% better than RePlAce (1.4578)
-- Runtime: ~50 min per benchmark on RTX 4050 laptop; ~15 min on eval server
+- 18.6% better than the 1.4738 baseline
+- 17.7% better than RePlAce (1.4578)
+- Runtime: ~51 min per benchmark on RTX 4050 laptop; ~15 min on eval server
 
 ## The Problem
 

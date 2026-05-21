@@ -8,11 +8,11 @@
 
 | Metric | Value |
 |--------|-------|
-| **Average proxy cost** | **~1.19** (17 IBM benchmarks) |
+| **Average proxy cost** | **1.1994** (17 IBM benchmarks) |
 | All benchmarks valid | ✓ (0 overlaps on all 17) |
-| Runtime per benchmark | ~50 min (RTX 4050) / ~15 min (RTX 6000 Ada) |
-| vs RePlAce baseline (1.4578) | **18% better** |
-| vs SA baseline (2.1251) | **44% better** |
+| Runtime per benchmark | ~51 min (RTX 4050) / ~15 min (RTX 6000 Ada) |
+| vs RePlAce baseline (1.4578) | **17.7% better** |
+| vs SA baseline (2.1251) | **43.6% better** |
 
 ## Method Overview
 
@@ -120,7 +120,7 @@ This project evolved through rapid iteration over ~10 days. Here's how we got fr
 | Multi-mode strategy | 1.28 | default + congestion_aware configs |
 | Differentiable optimizer | 1.22 | Direct TILOS proxy optimization |
 | Iterative rounds | 1.20 | 3 rounds of coarse + fine |
-| ABU5 coordinate descent | **1.19** | Real TILOS evaluator moves |
+| ABU5 coordinate descent | **1.1994** | Real TILOS evaluator moves |
 
 ## Per-Benchmark Results
 
@@ -140,11 +140,9 @@ This project evolved through rapid iteration over ~10 days. Here's how we got fr
 | ibm13 | 1.1166 | 0.057 | 0.564 | 1.556 | 0 |
 | ibm14 | 1.2582 | 0.060 | 0.495 | 1.901 | 0 |
 | ibm15 | 1.3805 | 0.064 | 0.505 | 2.128 | 0 |
-| ibm16 | ~1.24* | — | — | — | 0 |
-| ibm17 | ~1.50* | — | — | — | 0 |
-| ibm18 | ~1.57* | — | — | — | 0 |
-
-*ibm16-18 estimated from previous runs; final numbers pending
+| ibm16 | 1.2564 | 0.055 | 0.524 | 1.879 | 0 |
+| ibm17 | 1.4836 | 0.064 | 0.453 | 2.386 | 0 |
+| ibm18 | 1.4971 | 0.071 | 0.479 | 2.373 | 0 |
 
 ## How to Run
 
