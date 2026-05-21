@@ -382,6 +382,17 @@ class DreamplacePlacer:
 
         print(f"[placer_dreamplace] {benchmark.name} best: "
               f"proxy={best_proxy:.4f} via {best_label}", flush=True)
+        
+        # Final bounds clamp — ensure no macro edge goes outside canvas
+        n_mac = benchmark.num_macros
+        sizes = benchmark.macro_sizes[:n_mac].float()
+        half_w = sizes[:, 0] / 2
+        half_h = sizes[:, 1] / 2
+        cw = float(benchmark.canvas_width)
+        ch = float(benchmark.canvas_height)
+        best_clean[:, 0] = best_clean[:, 0].clamp(half_w, cw - half_w)
+        best_clean[:, 1] = best_clean[:, 1].clamp(half_h, ch - half_h)
+        
         return best_clean
 
     def _run_modes(self, benchmark, bench_dir, modes):
