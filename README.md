@@ -160,13 +160,21 @@ python -m macro_place.evaluate submissions/analytical_placer/placer.py --all
 ### With Docker (recommended for judges)
 
 ```bash
-# Build the image (installs Python 3.10 for .so compatibility)
-docker build -t dreamplace-diffopt -f submissions/analytical_placer/Dockerfile .
+# Clone with submodules (REQUIRED for benchmarks)
+git clone --recursive https://github.com/Krish-kukreja/Macro-challenge-2026.git
+cd Macro-challenge-2026
 
-# Run evaluation (--network none enforced at runtime)
-docker run --gpus all --network none \
-  dreamplace-diffopt \
-  /submission/placer.py --all
+# If already cloned without --recursive:
+# git submodule update --init external/MacroPlacement
+
+# Build the image (~5 min, downloads Python 3.10 + PyTorch)
+docker build -t dreamplace-diffopt .
+
+# Run evaluation on all 17 benchmarks (--network none enforced)
+docker run --gpus all --network none dreamplace-diffopt
+
+# Run on a single benchmark
+docker run --gpus all --network none dreamplace-diffopt -b ibm01
 ```
 
 ## Architecture

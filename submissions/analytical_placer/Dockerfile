@@ -37,7 +37,7 @@ COPY macro_place/ /challenge/macro_place/
 COPY pyproject.toml /challenge/pyproject.toml
 COPY requirements.txt /challenge/requirements.txt
 
-# Copy benchmarks (TILOS ICCAD04 testcases)
+# Copy benchmarks (requires: git submodule update --init external/MacroPlacement)
 COPY external/MacroPlacement/Testcases/ICCAD04/ /challenge/external/MacroPlacement/Testcases/ICCAD04/
 
 # Copy PlacementCost evaluator
@@ -52,9 +52,9 @@ RUN python3.10 -m pip install --no-cache-dir -e .
 # Copy submission (placer.py + dreamplace_bundle/)
 COPY submissions/analytical_placer/ /submission/
 
-# Make dreamplace_integration importable from /submission context
+# Make dreamplace_integration importable
 ENV PYTHONPATH="/challenge:${PYTHONPATH}"
 
-# Default entrypoint: evaluate the submission placer
+# Default entrypoint: evaluate the submission placer on all benchmarks
 ENTRYPOINT ["python3.10", "-m", "macro_place.evaluate", "/submission/placer.py"]
 CMD ["--all"]
