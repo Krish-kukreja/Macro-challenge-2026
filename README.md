@@ -1,3 +1,43 @@
+# DREAMPlace-DiffOpt: Macro Placement via Differentiable Proxy Optimization
+
+> **Our submission for the Partcl/HRT Macro Placement Challenge 2026**
+
+## Method: DREAMPlace + Differentiable TILOS Proxy Optimizer
+
+| Metric | Value |
+|--------|-------|
+| **Average proxy cost** | ~1.19 (17 IBM benchmarks) |
+| **Overlaps** | 0 on all benchmarks |
+| **Runtime** | ~50 min/bench (RTX 4050) / ~15 min (RTX 6000 Ada) |
+
+### Pipeline
+
+```
+DREAMPlace (multi-mode) → Best-proxy checkpoint → Differentiable optimizer
+→ ABU5 coordinate descent → 4-stage overlap cleanup → Valid placement
+```
+
+### Key Innovation
+
+We directly optimize the TILOS proxy formula using PyTorch autograd with:
+- **Exact rectangular overlap density** matching TILOS computation
+- **Soft L-routing congestion** with sigmoid tile indicators + box-filter smoothing
+- **ABU5 coordinate descent** using the real TILOS evaluator for guaranteed improvement
+- **Progressive overlap curriculum** (0→2000) for maximum exploration
+
+This eliminates the objective mismatch between DREAMPlace's internal loss and the actual scoring metric, achieving 5-10% additional improvement over DREAMPlace alone.
+
+### How to Run
+
+```bash
+pip install -e .
+python -m macro_place.evaluate submissions/analytical_placer/placer.py --all
+```
+
+See [METHOD_README.md](METHOD_README.md) and [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) for full details.
+
+---
+
 # Partcl/HRT Macro Placement Challenge
 
 <img src="assets/HRT.png" alt="Hudson River Trading" height="80"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <img src="assets/partcl.png" alt="Partcl" height="80">
