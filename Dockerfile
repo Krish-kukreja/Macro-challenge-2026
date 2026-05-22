@@ -38,11 +38,9 @@ COPY macro_place/ /challenge/macro_place/
 COPY pyproject.toml /challenge/pyproject.toml
 COPY requirements.txt /challenge/requirements.txt
 
-# Copy benchmarks (requires: git submodule update --init external/MacroPlacement)
-COPY external/MacroPlacement/Testcases/ICCAD04/ /challenge/external/MacroPlacement/Testcases/ICCAD04/
-
-# Copy PlacementCost evaluator
-COPY external/MacroPlacement/CodeElements/Plc_client/ /challenge/external/MacroPlacement/CodeElements/Plc_client/
+# Copy benchmarks (clone submodule at build time so judges don't need --recursive)
+RUN git clone --depth 1 -b fix-scientific-notation-parsing \
+    https://github.com/partcleda/MacroPlacement.git /challenge/external/MacroPlacement
 
 # Copy dreamplace_integration (diff_proxy_optimizer, abu5_shifter, etc.)
 COPY dreamplace_integration/ /challenge/dreamplace_integration/
